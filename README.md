@@ -49,3 +49,54 @@ public static void main(final String[] args) {
 // Thread-1 started protected code on entity 8
 // Thread-1 finished protected code on entity 8
 ```
+
+4. EntityLocker allows concurrent execution of protected code on different entities.
+```java
+import candyjar.util.concurrent.locks.EntityLocker;
+
+public static void main(final String[] args) {
+  EntityLocker<Integer> integerLocker = new EntityLocker<>();
+  EntityLocker<String> stringLocker = new EntityLocker<>();
+
+  new EntityLockerThread<>(integerLocker, 1).start();
+  new EntityLockerThread<>(integerLocker, 1).start();
+  new EntityLockerThread<>(integerLocker, 2).start();
+  new EntityLockerThread<>(integerLocker, 2).start();
+  new EntityLockerThread<>(stringLocker, "a").start();
+  new EntityLockerThread<>(stringLocker, "a").start();
+}
+// Output:
+// Thread-3 started protected code on entity 2
+// Thread-4 started protected code on entity a
+// Thread-0 started protected code on entity 1
+// Thread-4 finished protected code on entity a
+// Thread-0 finished protected code on entity 1
+// Thread-3 finished protected code on entity 2
+// Thread-1 started protected code on entity 1
+// Thread-2 started protected code on entity 2
+// Thread-5 started protected code on entity a
+// Thread-1 finished protected code on entity 1
+// Thread-2 finished protected code on entity 2
+// Thread-5 finished protected code on entity a
+```
+
+5. EntityLocker allows reentrant locking.
+```java
+import candyjar.util.concurrent.locks.EntityLocker;
+
+public static void main(final String[] args) {
+  EntityLocker<Integer> integerLocker = new EntityLocker<>();
+  final int entityId = 5;
+
+  try {
+    integerLocker.lock(entityId);
+    integerLocker.lock(entityId);
+    // execute protected code here
+  } catch (InterruptedException e) {
+    Thread.currentThread().interrupt();
+  } finally {
+    integerLocker.unlock(entityId);
+    integerLocker.unlock(entityId);
+  }
+}
+```
