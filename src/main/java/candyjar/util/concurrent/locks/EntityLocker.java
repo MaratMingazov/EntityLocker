@@ -25,8 +25,8 @@ public class EntityLocker<T>  {
     private Map<T, Thread> lockMap = new HashMap<>();
     private Map<T, Integer> lockCountMap = new HashMap<>();
 
-    private static volatile Thread  globalLockedBy = null;
-    private static volatile int globalLocksCounter = 0;
+    private volatile Thread  globalLockedBy = null;
+    private volatile int globalLocksCounter = 0;
 
     /**
      * Acquires the locks.
@@ -115,18 +115,21 @@ public class EntityLocker<T>  {
      * @throws InterruptedException
      */
     public final synchronized void globalLock() throws InterruptedException {
-        boolean isLocalBlocked = false;
-        for (Integer value : lockCountMap.values()) {
-            if (value > 0) {
-                isLocalBlocked = true;
-            }
-        }
         Thread callingThread = Thread.currentThread();
-        while ((globalLocksCounter > 0 && globalLockedBy != callingThread) || isLocalBlocked) {
+        while ((globalLocksCounter > 0 && globalLockedBy != callingThread) || isLocalBlocked()) {
             wait();
         }
         globalLocksCounter++;
         globalLockedBy = callingThread;
+    }
+
+    private boolean isLocalBlocked() {
+        for (Integer value : lockCountMap.values()) {
+            if (value > 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
 
