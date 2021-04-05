@@ -100,3 +100,78 @@ public static void main(final String[] args) {
   }
 }
 ```
+
+6. EntityLocker allows the caller to specify timeout for locking.
+```java
+import candyjar.util.concurrent.locks.EntityLocker;
+
+public static void main(final String[] args) {
+  EntityLocker<Integer> integerLocker = new EntityLocker<>();
+  final int entityId = 5;
+  final long timeout = 1000;
+
+  try {
+    if (integerLocker.tryLock(entityId, timeout)) {
+      // execute protected code here
+    } else {
+      // locking refused code
+    }
+  } catch (InterruptedException e) {
+    Thread.currentThread().interrupt();
+  } finally {
+    integerLocker.unlock(entityId);
+  }
+}
+```
+
+7. EntityLocker implements protection from deadlocks.
+```java
+import candyjar.util.concurrent.locks.EntityLocker;
+
+public static void main(final String[] args) {
+  EntityLocker<Integer> integerLocker = new EntityLocker<>();
+  final int entityId = 5;
+
+  try {
+    if (integerLocker.tryLock(entityId)) {
+      // execute protected code here
+    } else {
+      // locking refused code
+    }
+  } catch (InterruptedException e) {
+    Thread.currentThread().interrupt();
+  } finally {
+    integerLocker.unlock(entityId);
+  }
+}
+```
+
+8. EntityLocker implements global locks. Protected code that executes under a global locks not executes concurrently with any other protected code.
+```java
+import candyjar.util.concurrent.locks.EntityLocker;
+
+public static void main(final String[] args) {
+  EntityLocker<Integer> integerLocker = new EntityLocker<>();
+
+  new EntityLockerThread<>(integerLocker, 2).start();
+  new EntityLockerThread<>(integerLocker, 3).start();
+
+  try {
+    integerLocker.globalLock();
+    System.err.println("global lock");
+  } catch (InterruptedException e) {
+    Thread.currentThread().interrupt();
+  } finally {
+    System.err.println("global unlock");
+    integerLocker.globalUnlock();
+  }
+
+}
+// Output:
+// global lock
+// global unlock
+// Thread-0 started protected code on entity 2
+// Thread-1 started protected code on entity 3
+// Thread-0 finished protected code on entity 2
+// Thread-1 finished protected code on entity 3
+```
